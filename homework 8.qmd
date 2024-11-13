@@ -1,0 +1,93 @@
+---
+title: "ST558 Homework 8"
+format: html
+editor: visual
+---
+
+## Reading in the data
+```{r}
+library(tidyverse)
+temp_data <- read_csv("SeoulBikeData.csv", col_names = TRUE, locale = locale(encoding="latin1"))
+```
+
+## Checking the data
+```{r, eval=F}
+str(temp_data)  # checking column types
+summary(temp_data)  # checking summary stats on numeric columns
+
+## checking categorical variable values except date
+unique(temp_data$Seasons)
+unique(temp_data$Holiday)
+unique(temp_data$`Functioning Day`)
+```
+
+```{r}
+bike_data <- temp_data |>
+  drop_na() |>  # removes any rows with missing values (there are none)
+  mutate(Date = dmy(Date)) |>  # converts date column to date variable
+  mutate(across(where(is.character), as.factor))  # converts all other character columns into factors
+
+## renaming all variables
+bike_names <- c("date", "count", "hour", "temp", "humidity", "windspeed", "visibility", "dewpoint", "radiation", "rainfall",
+                "snowfall", "season", "holiday", "funcday")
+
+names(bike_data) <- bike_names
+```
+
+```{r}
+## creating summary statistics
+bike_data |>
+  group_by(season, holiday, funcday) |>
+  summarize(mean = mean(count, na.rm = TRUE), 
+                 sd = sd(count, na.rm = TRUE))
+
+## count is 0 when funcday = No, removing from data
+bike_data <- bike_data |>
+  filter(funcday != "No")
+```
+
+```{r}
+## final summary
+sum_data <- bike_data |>
+  group_by(date, season, holiday) |>
+  summarize(count = sum(count, na.rm = TRUE),
+            rainfall = sum(rainfall, na.rm = TRUE),
+            snowfall = sum(snowfall, na.rm = TRUE),
+            across(where(is.numeric) & !c(count, hour), mean, na.rm = TRUE)
+            )
+sum_data
+```
+
+```{r}
+## recreating summary stats on new data
+sum_data |>
+  group_by(season, holiday) |>
+  summarize(across(where(is.numeric),
+                   list("mean" = ~ mean(.x, na.rm = TRUE), "sd" = ~ sd(.x, na.rm = TRUE)),
+                   .names = "{.fn}_{.col}"))
+```
+
+```{r}
+## basic plots
+ggplot(sum_data, aes(x = count, fill = season)) +
+  geom_boxplot() +
+  labs(x = "Number of Bikes Rented", fill = "Season")
+
+ggplot(sum_data, aes(x = count, y = temp)) +
+  geom_point() +
+  labs(x = "Number of Bikes Rented", y = "Temperature(°C)") +
+  geom_jitter(width = 0.2, alpha = 0.3)
+
+ggplot(sum_data, aes(x = date, y = count)) +
+  geom_line() +
+  labs(x = "Date", y = "Number of Bikes Rented")
+```
+
+```{r}
+## correlation between numerical variables
+sum_data |>
+  ungroup() |>
+  select(where(is.numeric)) |>
+  cor()
+```
+
