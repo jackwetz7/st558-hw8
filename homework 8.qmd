@@ -4,13 +4,13 @@ format: html
 editor: visual
 ---
 
-## Reading in the data
+## Reading in the Data
 ```{r}
 library(tidyverse)
 temp_data <- read_csv("SeoulBikeData.csv", col_names = TRUE, locale = locale(encoding="latin1"))
 ```
 
-## Checking the data
+## Checking the Data
 ```{r, eval=F}
 str(temp_data)  # checking column types
 summary(temp_data)  # checking summary stats on numeric columns
@@ -89,5 +89,54 @@ sum_data |>
   ungroup() |>
   select(where(is.numeric)) |>
   cor()
+```
+
+## Split the Data
+```{r}
+library(tidymodels)
+bike_split <- initial_split(sum_data, 0.75)
+bike_train <- training(bike_split)
+bike_test <- testing(bike_split)
+```
+
+```{r}
+bike_10_fold <- vfold_cv(bike_train, 10)
+```
+
+## Fitting MLR Models
+```{r}
+bike_rec_1 <- 
+  recipe(count ~ ., data = sum_data) |>
+  update_role(date, new_role = "ID") |>
+  step_date(date, "dow") |>
+  step_mutate(day_type = factor(ifelse(dow == 1 | dow == 7, "weekend", "weekday"))) |>
+  step_rm(dow) |>
+  step_normalize(all_numeric(), -all_outcomes()) |>
+  step_dummy(season, holiday, day_type)
+```
+
+```{r}
+bike_rec_2 <- 
+  recipe(count ~ ., data = sum_data) |>
+  update_role(date, new_role = "ID") |>
+  step_date(date, "dow") |>
+  step_mutate(day_type = factor(ifelse(dow == 1 | dow == 7, "weekend", "weekday"))) |>
+  step_rm(dow) |>
+  step_normalize(all_numeric(), -all_outcomes()) |>
+  step_dummy(season, holiday, day_type) |>
+  step_interact(terms = ~holiday*temp*starts_with("season"))
+```
+
+```{r}
+bike_rec_3 <- 
+  recipe(count ~ ., data = sum_data) |>
+  update_role(date, new_role = "ID") |>
+  step_date(date, "dow") |>
+  step_mutate(day_type = factor(ifelse(dow == 1 | dow == 7, "weekend", "weekday"))) |>
+  step_rm(dow) |>
+  step_normalize(all_numeric(), -all_outcomes()) |>
+  step_dummy(season, holiday, day_type) |>
+  step_interact(terms = ~holiday*temp*starts_with("season")) |>
+  step_poly(all_numeric(), degree = 2)
 ```
 
