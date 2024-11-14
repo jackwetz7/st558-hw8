@@ -105,38 +105,88 @@ bike_10_fold <- vfold_cv(bike_train, 10)
 
 ## Fitting MLR Models
 ```{r}
+## first recipe
 bike_rec_1 <- 
   recipe(count ~ ., data = sum_data) |>
   update_role(date, new_role = "ID") |>
-  step_date(date, "dow") |>
-  step_mutate(day_type = factor(ifelse(dow == 1 | dow == 7, "weekend", "weekday"))) |>
-  step_rm(dow) |>
+  step_date(date, features = "dow") |>
+  step_mutate(day_type = factor(if_else(date_dow %in% c("Sat", "Sun"), "weekend", "weekday"))) |>
+  step_rm(date_dow) |>
   step_normalize(all_numeric(), -all_outcomes()) |>
   step_dummy(season, holiday, day_type)
 ```
 
 ```{r}
+## second recipe
 bike_rec_2 <- 
   recipe(count ~ ., data = sum_data) |>
   update_role(date, new_role = "ID") |>
-  step_date(date, "dow") |>
-  step_mutate(day_type = factor(ifelse(dow == 1 | dow == 7, "weekend", "weekday"))) |>
-  step_rm(dow) |>
+  step_date(date, features = "dow") |>
+  step_mutate(day_type = factor(if_else(date_dow %in% c("Sat", "Sun"), "weekend", "weekday"))) |>
+  step_rm(date_dow) |>
   step_normalize(all_numeric(), -all_outcomes()) |>
   step_dummy(season, holiday, day_type) |>
-  step_interact(terms = ~starts_with("season")*holiday + starts_with("season")*temp + temp*rain)
+  step_interact(terms = ~starts_with("season")*starts_with("holiday") + temp*rainfall) |>
+  step_interact(terms = ~season_Spring*temp + season_Winter*temp) |>
+  step_interact(terms = ~season_Summer*temp)
 ```
 
 ```{r}
+## third recipe
 bike_rec_3 <- 
   recipe(count ~ ., data = sum_data) |>
   update_role(date, new_role = "ID") |>
-  step_date(date, "dow") |>
-  step_mutate(day_type = factor(ifelse(dow == 1 | dow == 7, "weekend", "weekday"))) |>
-  step_rm(dow) |>
+  step_date(date, features = "dow") |>
+  step_mutate(day_type = factor(if_else(date_dow %in% c("Sat", "Sun"), "weekend", "weekday"))) |>
+  step_rm(date_dow) |>
   step_normalize(all_numeric(), -all_outcomes()) |>
   step_dummy(season, holiday, day_type) |>
-  step_interact(terms = ~starts_with("season")*holiday + starts_with("season")*temp + temp*rain) |>
+  step_interact(terms = ~starts_with("season")*starts_with("holiday") + temp*rainfall) |>
+  step_interact(terms = ~season_Spring*temp + season_Winter*temp) |>
+  step_interact(terms = ~season_Summer*temp) |>
   step_poly(rainfall, snowfall, temp, humidity, windspeed, visibility, dewpoint, radiation, degree = 2)
+```
+
+```{r}
+## fitting the models
+bike_mod <- linear_reg() |>
+  set_engine("lm")
+
+bike_wfl_1 <- workflow() |>
+  add_recipe(bike_rec_1) |>
+  add_model(bike_mod)
+
+bike_wfl_2 <- workflow() |>
+  add_recipe(bike_rec_2) |>
+  add_model(bike_mod)
+
+bike_wfl_3 <- workflow() |>
+  add_recipe(bike_rec_3) |>
+  add_model(bike_mod)
+```
+
+```{r}
+bike_cv_fits_1 <- bike_wfl_1 |>
+  fit_resamples(bike_10_fold)
+
+bike_cv_fits_2 <- bike_wfl_2 |>
+  fit_resamples(bike_10_fold)
+
+bike_cv_fits_3 <- bike_wfl_3 |>
+  fit_resamples(bike_10_fold)
+
+collect_metrics(bike_cv_fits_1)
+collect_metrics(bike_cv_fits_2)
+collect_metrics(bike_cv_fits_3)  # lowest RMSE
+```
+
+```{r}
+## fitting best model to entire training data set
+best_fit  <- last_fit(bike_wfl_3, bike_split)
+collect_metrics(best_fit)
+
+best_fit |>
+  extract_fit_parsnip() |>
+  tidy()
 ```
 
