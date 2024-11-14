@@ -124,7 +124,7 @@ bike_rec_2 <-
   step_rm(dow) |>
   step_normalize(all_numeric(), -all_outcomes()) |>
   step_dummy(season, holiday, day_type) |>
-  step_interact(terms = ~holiday*temp*starts_with("season"))
+  step_interact(terms = ~starts_with("season")*holiday + starts_with("season")*temp + temp*rain)
 ```
 
 ```{r}
@@ -136,7 +136,7 @@ bike_rec_3 <-
   step_rm(dow) |>
   step_normalize(all_numeric(), -all_outcomes()) |>
   step_dummy(season, holiday, day_type) |>
-  step_interact(terms = ~holiday*temp*starts_with("season")) |>
-  step_poly(all_numeric(), degree = 2)
+  step_interact(terms = ~starts_with("season")*holiday + starts_with("season")*temp + temp*rain) |>
+  step_poly(rainfall, snowfall, temp, humidity, windspeed, visibility, dewpoint, radiation, degree = 2)
 ```
 
