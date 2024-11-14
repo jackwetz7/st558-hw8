@@ -11,7 +11,7 @@ temp_data <- read_csv("SeoulBikeData.csv", col_names = TRUE, locale = locale(enc
 ```
 
 ## Checking the Data
-```{r, eval=F}
+```{r}
 str(temp_data)  # checking column types
 summary(temp_data)  # checking summary stats on numeric columns
 
@@ -72,12 +72,14 @@ sum_data |>
 ggplot(sum_data, aes(x = count, fill = season)) +
   geom_boxplot() +
   labs(x = "Number of Bikes Rented", fill = "Season")
+```
 
-ggplot(sum_data, aes(x = count, y = temp)) +
-  geom_point() +
-  labs(x = "Number of Bikes Rented", y = "Temperature(°C)") +
-  geom_jitter(width = 0.2, alpha = 0.3)
+```{r}
+ggplot(sum_data, aes(x = count, y = humidity)) +
+  geom_point()
+```
 
+```{r}
 ggplot(sum_data, aes(x = date, y = count)) +
   geom_line() +
   labs(x = "Date", y = "Number of Bikes Rented")
